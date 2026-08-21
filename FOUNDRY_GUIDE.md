@@ -7,7 +7,7 @@
 ## 0. 工程结构
 
 ```
-BigBank/
+bank/
 ├── src/            合约源码       Bank.sol / BigBank.sol
 ├── test/           测试代码       *.t.sol      ← 日常主战场
 ├── script/         部署脚本       *.s.sol
