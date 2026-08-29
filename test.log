@@ -1,0 +1,42 @@
+No files changed, compilation skipped
+
+Ran 11 tests for test/BankChallenge.t.sol:BankChallengeTest
+[PASS] testBalanceBeforeAndAfterDeposit() (gas: 87910)
+[PASS] testNonAdminCannotWithdrawAll() (gas: 75976)
+[PASS] testOnlyAdminCanWithdrawAll() (gas: 83890)
+[PASS] testTop3SameUserDepositsTwice() (gas: 147787)
+[PASS] testTop3WithFourUsers() (gas: 229711)
+[PASS] testTop3WithOneUser() (gas: 80442)
+[PASS] testTop3WithThreeUsers() (gas: 193548)
+[PASS] testTop3WithThreeUsersTie() (gas: 193296)
+[PASS] testTop3WithTwoUsers() (gas: 136850)
+[PASS] testUserCanWithdrawPartial() (gas: 84981)
+[PASS] testUserCannotWithdrawEntireBalance() (gas: 76987)
+Suite result: ok. 11 passed; 0 failed; 0 skipped; finished in 526.46µs (569.50µs CPU time)
+
+Ran 8 tests for test/Bank.t.sol:BankTest
+[PASS] testAdminWithdrawAll() (gas: 83746)
+[PASS] testAdminWithdrawAllRevertsForNonAdmin() (gas: 75922)
+[PASS] testDeposit() (gas: 73454)
+[PASS] testReceiveDeposit() (gas: 73487)
+[PASS] testTop3Ranking() (gas: 136630)
+[PASS] testUserCannotWithdrawEntireBalance() (gas: 77019)
+[PASS] testWithdrawPartial() (gas: 85267)
+[PASS] testWithdrawRevertsWhenInsufficient() (gas: 14212)
+Suite result: ok. 8 passed; 0 failed; 0 skipped; finished in 611.17µs (437.08µs CPU time)
+
+Ran 11 tests for test/BigBank.t.sol:BigBankTest
+[PASS] testAdminIsAdminContract() (gas: 11424)
+[PASS] testAdminWithdrawFlow() (gas: 98596)
+[PASS] testAdminWithdrawRejectsNonAdmin() (gas: 14245)
+[PASS] testChangeAdminRejectsZeroAddress() (gas: 9431)
+[PASS] testDeposit() (gas: 73476)
+[PASS] testDepositEmitsEvent() (gas: 74335)
+[PASS] testDepositTooSmallReverts() (gas: 18188)
+[PASS] testFuzz_Deposit(uint96) (runs: 256, μ: 75123, ~: 75123)
+[PASS] testOnlyOwnerCanChangeAdmin() (gas: 12161)
+[PASS] testReceiveDeposit() (gas: 73509)
+[PASS] testTop3Ranking() (gas: 136762)
+Suite result: ok. 11 passed; 0 failed; 0 skipped; finished in 5.72ms (5.52ms CPU time)
+
+Ran 3 test suites in 6.07ms (6.86ms CPU time): 30 tests passed, 0 failed, 0 skipped (30 total tests)
