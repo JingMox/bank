@@ -16,7 +16,7 @@ contract BigBankTest is Test {
     function setUp() public {
         bank = new BigBank();
         adm = new Admin();
-        bank.changeAdmin(address(adm)); // 管理员转移给 Admin 合约
+        bank.changeAdmin(address(adm)); // Transfer admin role to the Admin contract
         vm.deal(user1, 10 ether);
         vm.deal(user2, 10 ether);
     }
@@ -32,14 +32,14 @@ contract BigBankTest is Test {
         assertEq(bank.balances(user1), 1 ether);
     }
 
-    // modifier 拦下不足 0.001 ether 的存款
+    // Modifier rejects deposits less than or equal to 0.001 ether
     function testDepositTooSmallReverts() public {
         vm.prank(user1);
         vm.expectRevert("Deposit amount must greater than 0.001 ether");
         bank.deposit{value: 0.0005 ether}();
     }
 
-    // 直接转账走 receive()，同样受限额约束
+    // Direct ETH transfer via receive(), also enforced by deposit threshold
     function testReceiveDeposit() public {
         vm.prank(user1);
         (bool ok,) = address(bank).call{value: 1 ether}("");
@@ -58,7 +58,7 @@ contract BigBankTest is Test {
         bank.changeAdmin(address(0));
     }
 
-    // 第 04 课核心：Admin 合约提走银行资金，再转给 owner
+    // Two-step withdrawal architecture: Admin contract sweeps bank funds, then transfers to owner
     function testAdminWithdrawFlow() public {
         vm.prank(user1);
         bank.deposit{value: 0.5 ether}();
