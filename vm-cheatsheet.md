@@ -1,94 +1,94 @@
-# Foundry Cheatcode 速查表（vm 魔术笔）
+# Foundry Cheatcode Cheatsheet (`vm` Guide)
 
-> 配套练习：Bank 合约测试
+> Reference Implementation: Bank & BigBank Smart Contract Test Suites
 >
-> 一句话原理：`vm` 是 `Test.sol` 里预置的一个**特殊地址常量**，Foundry 的 EVM 对它开了特权通道——调用它不执行任何合约代码，而是直接执行内部功能（改余额、换身份、预判回滚……）。真实链上它只是一个空地址：**作弊能力只存在于测试环境**。
+> Core Concept: `vm` is a special pre-set constant address in `Test.sol`. Foundry's EVM opens a privileged channel for it—calling it does not execute smart contract bytecode, but instead directly triggers EVM runtime hooks (modifying balances, altering caller identities, asserting reverts, etc.). On a live blockchain it is simply an empty address: **cheatcode capabilities exist strictly within the local test environment**.
 
-## 黄金套路：四动作
+## The Core Four-Step Pattern
 
-| 步骤 | 语法 | 干什么 | Bank 场景 |
+| Step | Syntax | Purpose | Bank Contract Scenario |
 |---|---|---|---|
-| 1 发钱 | `vm.deal(addr, 10 ether)` | 把 addr 的 ETH 余额**设置**为 10 ether（覆盖式，不是 +10） | 用户兜里没钱就存不了款 |
-| 2 换身份 | `vm.prank(addr)` | 下一笔调用伪装成 addr 发出（只生效一次） | 让 user1 去存款 |
-| 3 调用 | `bank.deposit{value: 1 ether}()` | 走**真实 EVM 路径**：msg.value 真扣调用者余额、真更新合约状态 | 存款逻辑必须真实 |
-| 4 对账 | `assertEq(a, b)` | 断言相等，不等则测试失败 | 余额是否如预期更新 |
+| 1. Fund | `vm.deal(addr, 10 ether)` | Sets the ETH balance of `addr` to 10 ether (overwrite, not additive) | Fund test account before depositing |
+| 2. Impersonate | `vm.prank(addr)` | Impersonates `addr` as `msg.sender` for the **very next** call | Submit transaction as `user1` |
+| 3. Execute | `bank.deposit{value: 1 ether}()` | Executes through the **genuine EVM path**: `msg.value` deducts balance, contract state updates | Execute authentic state transition |
+| 4. Assert | `assertEq(a, b)` | Asserts equality; fails the test on mismatch | Verify balance and leaderboard state |
 
-精髓一句话：**环境可以作弊，逻辑必须真实。**
+Core takeaway: **The environment can be simulated, but business logic must execute genuinely.**
 
-## 常用 cheatcode 一览
+## Common Cheatcodes Overview
 
-| cheatcode | 作用 | 示例 |
+| Cheatcode | Purpose | Example |
 |---|---|---|
-| `vm.deal(addr, amount)` | 设置 addr 的 ETH 余额（覆盖式） | `vm.deal(user1, 10 ether)` |
-| `vm.prank(addr)` | 下一笔调用以 addr 身份发出（一次性） | `vm.prank(user1); bank.deposit{value: 1 ether}();` |
-| `vm.startPrank(addr)` | 之后所有调用都以 addr 身份，直到 `stopPrank` | 同一个用户连续多次存款 |
-| `vm.stopPrank()` | 结束 startPrank 的身份伪装 | |
-| `vm.expectRevert("msg")` | 断言**下一笔**调用必然回滚，且错误信息匹配 | `vm.expectRevert("only admin can withdraw");` |
-| `vm.expectRevert()` | 只断言会回滚，不校验信息 | 不关心报错文案时 |
-| `vm.expectEmit(...)` | 断言下一笔调用发出某个事件 | 见下方案例 |
-| `vm.assume(cond)` | fuzz 测试时过滤输入 | `vm.assume(amount > 0.001 ether)` |
+| `vm.deal(addr, amount)` | Set ETH balance for `addr` (overwrite) | `vm.deal(user1, 10 ether)` |
+| `vm.prank(addr)` | Impersonate `addr` for the next immediate call (one-shot) | `vm.prank(user1); bank.deposit{value: 1 ether}();` |
+| `vm.startPrank(addr)` | Impersonate `addr` for all subsequent calls until `stopPrank` | Sequential operations from the same user |
+| `vm.stopPrank()` | Terminate active `startPrank` impersonation | |
+| `vm.expectRevert("msg")` | Assert next call reverts with exact error message | `vm.expectRevert("only admin can withdraw");` |
+| `vm.expectRevert()` | Assert next call reverts regardless of message | When error message is unconstrained |
+| `vm.expectEmit(...)` | Assert next call emits specified event | See event testing pattern below |
+| `vm.assume(cond)` | Filter invalid inputs during fuzz testing | `vm.assume(amount > 0.001 ether)` |
 
-完整列表：`lib/forge-std/src/Vm.sol`（接口定义），或文档 https://book.getfoundry.sh/cheatcodes/
+Full reference: `lib/forge-std/src/Vm.sol` (interface definition), or the official documentation at https://book.getfoundry.sh/cheatcodes/
 
-## 高频易混点
+## Key Concepts & Common Pitfalls
 
-### 1. vm.deal ≠ 转账
+### 1. `vm.deal` ≠ Transfer
 
-deal 只改测试环境里的一笔余额账：**不产生交易、不触发 receive()、不发事件、不经过合约任何代码**。
+`vm.deal` directly modifies the ledger balance within the testing EVM: **it produces no transaction, triggers no `receive()` hook, emits no events, and bypasses smart contract logic**.
 
-想模拟一笔真实存款，必须三步缺一不可：
+To simulate an authentic user deposit, all three steps are required:
 
 ```solidity
-vm.deal(user1, 10 ether);                 // 发钱（作弊）
-vm.prank(user1);                          // 换身份（作弊）
-bank.deposit{value: 1 ether}();           // 调用（真实 EVM 路径）
+vm.deal(user1, 10 ether);                 // 1. Fund test account (simulator)
+vm.prank(user1);                          // 2. Impersonate caller (simulator)
+bank.deposit{value: 1 ether}();           // 3. Execute call (genuine EVM path)
 ```
 
-### 2. prank 只生效一次，startPrank 一直生效
+### 2. `prank` is One-Shot; `startPrank` Persists
 
 ```solidity
-vm.prank(user1);                          // 只伪装这一笔
-bank.deposit{value: 1 ether}();           // ✅ 记在 user1 头上
-bank.deposit{value: 1 ether}();           // ❌ 这笔记回测试合约自己头上！
+vm.prank(user1);                          // Only applies to the immediate next call
+bank.deposit{value: 1 ether}();           // ✅ Recorded as user1
+bank.deposit{value: 1 ether}();           // ❌ Reverts to test contract itself as caller!
 
-vm.startPrank(user1);                     // 之后全部伪装成 user1
+vm.startPrank(user1);                     // Impersonates user1 for all subsequent calls
 bank.deposit{value: 1 ether}();
-bank.deposit{value: 1 ether}();           // ✅ 连续多笔都是 user1
+bank.deposit{value: 1 ether}();           // ✅ Both calls executed as user1
 vm.stopPrank();
 ```
 
-### 3. expectRevert 是「预判」，必须紧贴下一笔调用
+### 3. `expectRevert` is a Precondition; Must Precede the Target Call
 
 ```solidity
-vm.expectRevert("only admin can withdraw");  // 先立预判
-bank.withdraw();                             // 下一笔必须回滚
-// 中间不能插其他调用，否则预判会落到那一笔上
+vm.expectRevert("only admin can withdraw");  // Declare expectation first
+bank.withdraw();                             // Target call must revert immediately
+// No other calls may be placed in between, otherwise the revert expectation attaches to that call
 ```
 
-### 4. expectEmit：想断言「事件被发出」
+### 4. `expectEmit`: Asserting Event Emissions
 
 ```solidity
 event Deposit(address indexed user, uint256 amount);
 
-vm.expectEmit(true, false, false, true);  // 四个布尔 = 是否校验：签名/indexed/indexed/data
-emit Deposit(user1, 1 ether);             // 声明「我期待这个事件」
+vm.expectEmit(true, false, false, true);  // 4 booleans: check topic1 / topic2 / topic3 / data
+emit Deposit(user1, 1 ether);             // Declare expected event signature & parameters
 vm.prank(user1);
-bank.deposit{value: 1 ether}();           // 实际调用必须发出匹配的事件，否则断言失败
+bank.deposit{value: 1 ether}();           // Actual execution must emit matching event
 ```
 
-记不住四个布尔就照抄 `(true, false, false, true)`：签名和数据必须对，indexed 参数不校验。
+When in doubt, `(true, false, false, true)` matches indexed topic1 (e.g. user address) and unindexed event data (e.g. amount).
 
-## 本题（Bank 测试）组合拳
+## Bank Testing Patterns & Idioms
 
 ```solidity
-// 存款前后余额
-assertEq(bank.balances(user1), 0);        // 存款前对账
+// Deposit balance verification
+assertEq(bank.balances(user1), 0);        // Pre-deposit assertion
 vm.deal(user1, 10 ether);
 vm.prank(user1);
 bank.deposit{value: 1 ether}();
-assertEq(bank.balances(user1), 1 ether);  // 存款后对账
+assertEq(bank.balances(user1), 1 ether);  // Post-deposit assertion
 
-// 非管理员取款被拒
+// Unauthorized withdrawal rejection
 vm.prank(user1);
 vm.expectRevert("only admin can withdraw");
 bank.withdraw();

@@ -10,7 +10,7 @@ contract BankTest is Test {
     address user2 = address(0xCAFE);
 
     function setUp() public {
-        bank = new Bank(); // 本合约即部署者，也就是 admin
+        bank = new Bank(); // Test contract is the deployer, hence the admin
         vm.deal(user1, 10 ether);
         vm.deal(user2, 10 ether);
     }
@@ -21,7 +21,7 @@ contract BankTest is Test {
         assertEq(bank.balances(user1), 1 ether);
     }
 
-    // 直接向合约转账，走 receive() 分支
+    // Direct transfer to contract, triggers receive() fallback
     function testReceiveDeposit() public {
         vm.prank(user1);
         (bool ok,) = address(bank).call{value: 1 ether}("");
@@ -44,7 +44,7 @@ contract BankTest is Test {
         bank.withdraw(1 ether);
     }
 
-    // 取走自己的全部余额，只有 admin 能做
+    // Withdrawing full balance is restricted to admin only
     function testUserCannotWithdrawEntireBalance() public {
         vm.prank(user1);
         bank.deposit{value: 1 ether}();
@@ -53,7 +53,7 @@ contract BankTest is Test {
         bank.withdraw(1 ether);
     }
 
-    // 管理员专用的无参 withdraw()，提走银行全部资金
+    // Admin-exclusive parameterless withdraw(), sweeps all contract funds
     function testAdminWithdrawAll() public {
         vm.prank(user1);
         bank.deposit{value: 2 ether}();
